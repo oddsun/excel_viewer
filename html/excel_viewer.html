@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Project View</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.14.3/jszip.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.14.3/xlsx.js"></script>
+  <style>
+
+  table {
+    border-collapse: collapse;
+    border: 1px solid black;
+    table-layout: auto;
+    width: 100%;
+  }
+
+  div {
+    margin: 10px;
+  }
+
+  th,td {
+    padding: 5px;
+    border: 1px solid black;
+  }
+
+  div#xlsx-div table{
+    border-collapse: collapse;
+    border: 1px solid black;
+    table-layout: auto;
+    width: auto;
+  }
+
+  div#drop {
+    display: table-cell;
+    text-align: center;
+    vertical-align: middle;
+    height:100px;
+    width:150px;
+    background-color:lightblue;
+  }
+
+  select {
+    width: 300px;
+  }
+
+  .invisible {
+    display: none;
+  }
+
+  .visible {
+    display: ;
+  }
+
+  .not-selected {
+    background-color:lightgreen;
+  }
+
+  .selected {
+    background-color:lightyellow;
+  }
+
+  .left-right {
+    float: left;
+  }
+
+  div.tables {
+    clear:both;
+  }
+
+  .padd{
+    margin: 1px;
+  }
+
+</style>
+</head>
+<body>
+  <div id="drop" class="left-right">
+    <p>Drop excel file here</p>
+    <br>
+    <button value="Clear Page" onClick="window.location.reload(false);">Clear Page</button>
+  </div>
+  <div id="filter-div" class="left-right">
+    <span>Filters:</span>
+    <input type='button' id='add-filter' value='Add Filter' onclick='add_filter();'/>
+    <br>
+    <form id='filter_form' action="javascript:filter()">
+      <select name='column' class='column padd' id='first-column'>
+      </select>
+      <input type='text' name='keyword' class='keyword padd' id='first-keyword'/>
+      <input type='submit'/>
+    </form>
+  </div>
+  <div id="xlsx-div" class='tables'></div>
+  <div id="htmlout" class='tables'></div>
+
+  <script>
+  var _table_ = document.createElement('table'),
+  _tr_ = document.createElement('tr'),
+  _th_ = document.createElement('th'),
+  _td_ = document.createElement('td');
+  function handleDrop(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    var files = e.dataTransfer.files;
+    var i, f;
+
+    for (i = 0, f = files[i]; i != files.length; ++i) {
+      var reader = new FileReader();
+      var name = f.name;
+      reader.onload = function(e) {
+        var data = e.target.result;
+        var HTMLOUT = document.getElementById('htmlout');
+        /* if binary string, read with type 'binary' */
+        var workbook = XLSX.read(data, {type: 'binary'});
+
+        var myNode = document.getElementById("xlsx-div");
+        var table_tab = _table_.cloneNode(false);
+        table_tab.className = 'hi';
+        var tr_tab = _tr_.cloneNode(false);
+        var parser = new DOMParser();
+        /* DO SOMETHING WITH workbook HERE */
+        workbook.SheetNames.forEach(function(sheetName) {
+          var td_tab = _td_.cloneNode(false);
+          td_tab.appendChild(document.createTextNode(sheetName || ''));
+          td_tab.addEventListener('click', show_sheet_hide_others);
+          td_tab.className = 'not-selected'
+          tr_tab.appendChild(td_tab);
+          var htmlstr = XLSX.utils.sheet_to_html(workbook.Sheets[sheetName],{editable:true});
+          var htmlDoc = parser.parseFromString(htmlstr, 'text/html');
+          var table_data = htmlDoc.getElementsByTagName('table')[0];
+          table_data.id = sheetName;
+          table_data.className = 'xlsx-tables invisible';
+          //table_data.style.display = "none";
+          HTMLOUT.appendChild(table_data);
+        });
+
+        table_tab.appendChild(tr_tab);
+        myNode.appendChild(table_tab);
+      };
+      reader.readAsBinaryString(f);
+    }
+  }
+  function show_sheet_hide_others(){
+    var tabs = document.getElementsByClassName("selected");
+    for(var i = 0; i < tabs.length; i++){
+      tabs[i].className = 'not-selected';
+    }
+    this.className = 'selected';
+    var sheetName = this.textContent
+    var tables = document.getElementsByClassName("xlsx-tables");
+    for(var i = 0; i < tables.length; i++){
+      if(sheetName != tables[i].id){
+        tables[i].className = "xlsx-tables invisible";
+      } else {
+        tables[i].className = "xlsx-tables visible";
+        var row = tables[i].getElementsByTagName('tr')[0];
+        // var myform = document.getElementById("filter_form");
+        // myform.removeChild(document.getElementById("column"));
+        // var selectList = document.createElement("select");
+        // selectList.id = "column";
+        // selectList.name = "column";
+        // myform.insertBefore(selectList, myform.firstChild);
+        var selectLists = document.getElementsByClassName("column")
+        for (var k = 0, selectList; selectList = selectLists[k]; k++){
+          while (selectList.firstChild) {
+            selectList.removeChild(selectList.firstChild);
+          }
+          for (var j = 0, cell; cell = row.cells[j]; j++) {
+            var option = document.createElement("option");
+            option.value = j;
+            option.text = j + ". " + cell.textContent;
+            selectList.appendChild(option);
+          }
+        }
+      }
+    }
+  }
+  function filter (){
+    var table = document.getElementsByClassName("xlsx-tables visible")[0];
+    var column_filters = document.getElementsByClassName("column");
+    var filter_keywords = document.getElementsByClassName("keyword");
+    for (var i = 1, row; row = table.rows[i]; i++) {
+      //iterate through rows
+      var to_show = true;
+      for (var j = 0; j < column_filters.length; j++){
+        var column_filter = row.cells[column_filters[j].value];
+        var keyword = filter_keywords[j].value.toUpperCase();
+        var cellValue = column_filter.textContent || column_filter.innerText;
+        if((cellValue.toUpperCase().indexOf(keyword) > -1 || (keyword === " " && cellValue==="")) && to_show){
+        } else {
+          to_show = false;
+        }
+      }
+      if (to_show){
+        row.className = "visible";
+      } else {
+        row.className = "invisible";
+      }
+    }
+  }
+  function add_filter(){
+    console.log('hi');
+    var selectList1 = document.getElementById("first-column");
+    var keyword1 = document.getElementById("first-keyword");
+    var linebreak = document.createElement("br");
+    var myform = document.getElementById("filter_form");
+    myform.appendChild(linebreak);
+
+    var newSelectList = selectList1.cloneNode(true);
+    newSelectList.removeAttribute('id');
+    var newKeyword = keyword1.cloneNode(true);
+    newKeyword.removeAttribute('id');
+    myform.appendChild(newSelectList);
+    myform.appendChild(document.createTextNode(" "));
+    myform.appendChild(newKeyword);
+  }
+
+  function handleDragOver(e) {
+    e.stopPropagation();
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy'; // Explicitly show this is a copy.
+  }
+  var drop_dom_element = document.getElementById('drop');
+  drop_dom_element.addEventListener('dragenter', handleDragOver, false);
+  drop_dom_element.addEventListener('dragover', handleDragOver, false);
+  drop_dom_element.addEventListener('drop', handleDrop, false);
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Viewer</title>
+<style>
+
+div {
+<!--    display: inline-block;-->
+}
+
+table {
+  border-collapse: collapse;
+  border: 1px solid black;
+  table-layout: auto;
+  width: 100%;
+  display: none;
+}
+
+th,td {
+  padding: 5px;
+  border: 1px solid black;
+}
+
+div#xlsx-div table{
+  border-collapse: collapse;
+  border: 1px solid black;
+  table-layout: auto;
+  width: auto;
+  display: table;
+}
+
+.not-selected {
+  background-color:lightgreen;
+}
+
+.selected {
+  background-color:lightyellow;
+}
+
+
+</style>
+</head>
+<body>
+
+<div id="xlsx-div">
+
+{{tab_html}}
+
+</div>
+<div id="htmlout">
+
+{{data_html}}
+
+</div>
+ <script>
+var tabs = document.getElementById("tabs").getElementsByTagName("td");
+
+for (var i = 0; i < tabs.length; i++) {
+    tabs[i].addEventListener('click', show_sheet_hide_others);
+}
+
+function show_sheet_hide_others(){
+    var tabs = document.getElementsByClassName("selected");
+    for(var i = 0; i < tabs.length; i++){
+        tabs[i].className = 'not-selected';
+    }
+    this.className = 'selected';
+    var sheetName = this.textContent
+    var arrows = document.getElementsByClassName("xlsx-tables");
+    for(var i = 0; i < arrows.length; i++){
+        if(sheetName != arrows[i].id){
+            arrows[i].style.display = "none";
+        } else {
+            arrows[i].style.display = "table";
+        }
+    }
+}
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+pyxlsb
+openpyxl
+flask
+flask_dropzone
+werkzeug
